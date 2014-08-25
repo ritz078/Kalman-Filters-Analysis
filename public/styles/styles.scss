@@ -1,0 +1,45 @@
+@import url(http://fonts.googleapis.com/css?family=Open+Sans);
+
+$font: "Open Sans", sans-serif;
+$color1:#006F85;
+$color2:#eee;
+
+* {
+    margin: 0;
+    padding: 0;
+}
+
+body, html {
+    font-family: $font;
+    width: 100%;
+    min-height: 100%;
+    font-size: 15px;
+}
+
+header {
+    background-color: $color1;
+    -webkit-box-shadow: 0px 1px 1px 0px rgba(0, 0, 0, 0.11);
+-moz-box-shadow:    0px 1px 1px 0px rgba(0, 0, 0, 0.11);
+box-shadow:         0px 1px 1px 0px rgba(0, 0, 0, 0.11);
+position:fixed;
+overflow:auto;
+        width:100%;
+    span {
+        text-align: center;
+        color: #FFF;
+        font-size: 20px;
+        padding: 10px;
+        display:block;
+       // font-weight: bold;
+        text-transform: capitalize;
+    }
+    .authors{
+    	div{
+    		width: 33.33%;
+    		float:left;
+    		text-align:center;
+    		padding: 5px;
+    		background-color:#fff;
+    	}
+    }
+}
