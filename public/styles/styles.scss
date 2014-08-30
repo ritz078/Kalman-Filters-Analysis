@@ -1,7 +1,7 @@
 @import url(http://fonts.googleapis.com/css?family=Open+Sans);
 
 $font: "Open Sans", sans-serif;
-$color1:#006F85;
+$color1:#008560;
 $color2:#eee;
 
 * {
@@ -24,6 +24,7 @@ box-shadow:         0px 1px 1px 0px rgba(0, 0, 0, 0.11);
 position:fixed;
 overflow:auto;
         width:100%;
+        z-index: 10;
     span {
         text-align: center;
         color: #FFF;
@@ -40,6 +41,17 @@ overflow:auto;
     		text-align:center;
     		padding: 5px;
     		background-color:#fff;
+    		color: #8A8A8A;
     	}
     }
+}
+
+nav{
+	width: 200px;
+	float:left;
+	height: 100%;
+	position:fixed;
+	background-color: #F1F1F1;
+z-index: 9;
+border-right: 1px solid #EBEBEB;
 }
