@@ -1,100 +1,256 @@
-clear all; 
-close all; 
-clc 
-%% Read video into MATLAB using aviread
-video = VideoReader('player.AVI');
-%'n' for calculating the number of frames in the video file
-n = length(video); 
-% Calculate the background image by averaging the first 10 images
-temp = zeros(size(video(1).cdata));
-[M,N] = size(temp(:,:,1));
-for i = 1:10 
-    temp = double(video(i).cdata) + temp;
+function multiObjectTracking()
+
+% Create system objects used for reading video, detecting moving objects,
+% and displaying the results.
+obj = setupSystemObjects();
+
+tracks = initializeTracks(); % Create an empty array of tracks.
+
+nextId = 1; % ID of the next track
+
+% Detect moving objects, and track them across video frames.
+while ~isDone(obj.reader)
+    frame = readFrame();
+    [centroids, bboxes, mask] = detectObjects(frame);
+    predictNewLocationsOfTracks();
+    [assignments, unassignedTracks, unassignedDetections] = ...
+        detectionToTrackAssignment();
+
+    updateAssignedTracks();
+    updateUnassignedTracks();
+    deleteLostTracks();
+    createNewTracks();
+
+    displayTrackingResults();
 end
-imbkg = temp/10; 
-% Initialization step for Kalman Filter
-centroidx = zeros(n,1);
-centroidy = zeros(n,1);
-predicted = zeros(n,4);
-actual = zeros(n,4); 
-% % Initialize the Kalman filter parameters
-% R - measurement noise,
-% H - transform from measure to state
-% Q - system noise,
-% P - the status covarince matrix
-% A - state transform matrix
 
-R=[[0.2845,0.0045]',[0.0045,0.0455]'];
-H=[[1,0]',[0,1]',[0,0]',[0,0]'];
-Q=0.01*eye(4);
-P = 100*eye(4);
-dt=1;
-A=[[1,0,0,0]',[0,1,0,0]',[dt,0,1,0]',[0,dt,0,1]']; 
-% loop over all image frames in the video
-kfinit = 0;
-th = 38;
-for i=1:n
-  imshow(video(i).cdata);
-  hold on
-  imcurrent = double(video(i).cdata);
-  
-  % Calculate the difference image to extract pixels with more than 40(threshold) change
-  diffimg = zeros(M,N); 
-  diffimg = (abs(imcurrent(:,:,1)-imbkg(:,:,1))>th) ...
-      | (abs(imcurrent(:,:,2)-imbkg(:,:,2))>th) ...
-      | (abs(imcurrent(:,:,3)-imbkg(:,:,3))>th); 
-  % Label the image and mark
-  labelimg = bwlabel(diffimg,4);
-  markimg = regionprops(labelimg,['basic']);
-  [MM,NN] = size(markimg); 
-  % Do bubble sort (large to small) on regions in case there are more than 1
-  % The largest region is the object (1st one)
-  for nn = 1:MM
-      if markimg(nn).Area > markimg(1).Area
-          tmp = markimg(1);
-          markimg(1)= markimg(nn);
-          markimg(nn)= tmp;
-      end
-  end 
-  % Get the upper-left corner, the measurement centroid and bounding window size
-  bb = markimg(1).BoundingBox;
-  xcorner = bb(1);
-  ycorner = bb(2);
-  xwidth = bb(3);
-  ywidth = bb(4);
-  cc = markimg(1).Centroid;
-  centroidx(i)= cc(1);
-  centroidy(i)= cc(2); 
-  % Plot the rectangle of background subtraction algorithm -- blue
-  hold on
-  rectangle('Position',[xcorner ycorner xwidth ywidth],'EdgeColor','b');
-  hold on
-  plot(centroidx(i),centroidy(i), 'bx'); 
-  % Kalman window size
-  kalmanx = centroidx(i)- xcorner;
-  kalmany = centroidy(i)- ycorner; 
-  if kfinit == 0
-      % Initialize the predicted centroid and volocity
-      predicted =[centroidx(i),centroidy(i),0,0]' ;
-  else
-      % Use the former state to predict the new centroid and volocity
-      predicted = A*actual(i-1,:)';
-  end
-  kfinit = 1; 
-  Ppre = A*P*A' + Q;
-  K = Ppre*H'/(H*Ppre*H'+R);
-  actual(i,:) = (predicted + K*([centroidx(i),centroidy(i)]' - H*predicted))';
-  P = (eye(4)-K*H)*Ppre; 
-  % Plot the tracking rectangle after Kalman filtering -- red
-  hold on
-rectangle('Position',[(actual(i,1)-kalmanx) (actual(i,2)-kalmany) xwidth ywidth], 'EdgeColor', 'r','LineWidth',1.5);
-  hold on
-  plot(actual(i,1),actual(i,2), 'rx','LineWidth',1.5);
-  drawnow;
+function obj = setupSystemObjects()
+        % Initialize Video I/O
+        % Create objects for reading a video from a file, drawing the tracked
+        % objects in each frame, and playing the video.
+
+        % Create a video file reader.
+        obj.reader = vision.VideoFileReader('iitr.avi');
+
+        % Create two video players, one to display the video,
+        % and one to display the foreground mask.
+        obj.videoPlayer = vision.VideoPlayer('Position', [10, 200, 350, 200]);  %Specify the size and position of the video player window in pixels as a four-element vector of the form: [left bottom width height]
+        obj.maskPlayer = vision.VideoPlayer('Position', [370, 200, 350, 200]);
+
+        % Create system objects for foreground detection and blob analysis
+
+        % The foreground detector is used to segment moving objects from
+        % the background. It outputs a binary mask, where the pixel value
+        % of 1 corresponds to the foreground and the value of 0 corresponds
+        % to the background.
+
+        obj.detector = vision.ForegroundDetector('NumGaussians', 3, ...
+            'NumTrainingFrames', 40, 'MinimumBackgroundRatio', 0.7);
+
+        % Connected groups of foreground pixels are likely to correspond to moving
+        % objects.  The blob analysis system object is used to find such groups
+        % (called 'blobs' or 'connected components'), and compute their
+        % characteristics, such as area, centroid, and the bounding box.
+
+        obj.blobAnalyser = vision.BlobAnalysis('BoundingBoxOutputPort', true, ...
+            'AreaOutputPort', true, 'CentroidOutputPort', true, ...
+            'MinimumBlobArea', 400);
 end
-%end of the code 
-%Copyright (c) 2012, Xing
-%All rights reserved.
 
+function tracks = initializeTracks()
+        % create an empty array of tracks
+        tracks = struct(...
+            'id', {}, ...
+            'bbox', {}, ...
+            'kalmanFilter', {}, ...
+            'age', {}, ...
+            'totalVisibleCount', {}, ...
+            'consecutiveInvisibleCount', {});
+end
 
-Read more: http://www.divilabs.com/2013/11/motion-trackingdetection-in-matlab.html#ixzz3FoQZ3YyK
+function frame = readFrame()
+        frame = obj.reader.step();
+end
+
+function [centroids, bboxes, mask] = detectObjects(frame)
+
+        % Detect foreground.
+        mask = obj.detector.step(frame);
+
+        % Apply morphological operations to remove noise and fill in holes.
+        mask = imopen(mask, strel('rectangle', [3,3]));
+        mask = imclose(mask, strel('rectangle', [15, 15]));
+        mask = imfill(mask, 'holes');
+
+        % Perform blob analysis to find connected components.
+        [~, centroids, bboxes] = obj.blobAnalyser.step(mask);
+end
+
+ function predictNewLocationsOfTracks()
+        for i = 1:length(tracks)
+            bbox = tracks(i).bbox;
+
+            % Predict the current location of the track.
+            predictedCentroid = predict(tracks(i).kalmanFilter);
+
+            % Shift the bounding box so that its center is at
+            % the predicted location.
+            predictedCentroid = int32(predictedCentroid) - bbox(3:4) / 2;
+            tracks(i).bbox = [predictedCentroid, bbox(3:4)];
+        end
+ end
+
+function [assignments, unassignedTracks, unassignedDetections] = ...
+            detectionToTrackAssignment()
+
+        nTracks = length(tracks);
+        nDetections = size(centroids, 1);
+
+        % Compute the cost of assigning each detection to each track.
+        cost = zeros(nTracks, nDetections);
+        for i = 1:nTracks
+            cost(i, :) = distance(tracks(i).kalmanFilter, centroids);
+        end
+
+        % Solve the assignment problem.
+        costOfNonAssignment = 20;
+        [assignments, unassignedTracks, unassignedDetections] = ...
+            assignDetectionsToTracks(cost, costOfNonAssignment);
+end
+
+function updateAssignedTracks()
+        numAssignedTracks = size(assignments, 1);
+        for i = 1:numAssignedTracks
+            trackIdx = assignments(i, 1);
+            detectionIdx = assignments(i, 2);
+            centroid = centroids(detectionIdx, :);
+            bbox = bboxes(detectionIdx, :);
+
+            % Correct the estimate of the object's location
+            % using the new detection.
+            correct(tracks(trackIdx).kalmanFilter, centroid);
+
+            % Replace predicted bounding box with detected
+            % bounding box.
+            tracks(trackIdx).bbox = bbox;
+
+            % Update track's age.
+            tracks(trackIdx).age = tracks(trackIdx).age + 1;
+
+            % Update visibility.
+            tracks(trackIdx).totalVisibleCount = ...
+                tracks(trackIdx).totalVisibleCount + 1;
+            tracks(trackIdx).consecutiveInvisibleCount = 0;
+        end
+end
+
+ function updateUnassignedTracks()
+        for i = 1:length(unassignedTracks)
+            ind = unassignedTracks(i);
+            tracks(ind).age = tracks(ind).age + 1;
+            tracks(ind).consecutiveInvisibleCount = ...
+                tracks(ind).consecutiveInvisibleCount + 1;
+        end
+ end
+
+function deleteLostTracks()
+        if isempty(tracks)
+            return;
+        end
+
+        invisibleForTooLong = 20;
+        ageThreshold = 8;
+
+        % Compute the fraction of the track's age for which it was visible.
+        ages = [tracks(:).age];
+        totalVisibleCounts = [tracks(:).totalVisibleCount];
+        visibility = totalVisibleCounts ./ ages;
+
+        % Find the indices of 'lost' tracks.
+        lostInds = (ages < ageThreshold & visibility < 0.6) | ...
+            [tracks(:).consecutiveInvisibleCount] >= invisibleForTooLong;
+
+        % Delete lost tracks.
+        tracks = tracks(~lostInds);
+end
+
+function createNewTracks()
+        centroids = centroids(unassignedDetections, :);
+        bboxes = bboxes(unassignedDetections, :);
+
+        for i = 1:size(centroids, 1)
+
+            centroid = centroids(i,:);
+            bbox = bboxes(i, :);
+
+            % Create a Kalman filter object.
+            kalmanFilter = configureKalmanFilter('ConstantVelocity', ...
+                centroid, [200, 50], [100, 25], 100);
+
+            % Create a new track.
+            newTrack = struct(...
+                'id', nextId, ...
+                'bbox', bbox, ...
+                'kalmanFilter', kalmanFilter, ...
+                'age', 1, ...
+                'totalVisibleCount', 1, ...
+                'consecutiveInvisibleCount', 0);
+
+            % Add it to the array of tracks.
+            tracks(end + 1) = newTrack;
+
+            % Increment the next id.
+            nextId = nextId + 1;
+        end
+end
+
+function displayTrackingResults()
+        % Convert the frame and the mask to uint8 RGB.
+        frame = im2uint8(frame);
+        mask = uint8(repmat(mask, [1, 1, 3])) .* 255;
+
+        minVisibleCount = 8;
+        if ~isempty(tracks)
+
+            % Noisy detections tend to result in short-lived tracks.
+            % Only display tracks that have been visible for more than
+            % a minimum number of frames.
+            reliableTrackInds = ...
+                [tracks(:).totalVisibleCount] > minVisibleCount;
+            reliableTracks = tracks(reliableTrackInds);
+
+            % Display the objects. If an object has not been detected
+            % in this frame, display its predicted bounding box.
+            if ~isempty(reliableTracks)
+                % Get bounding boxes.
+                bboxes = cat(1, reliableTracks.bbox);
+
+                % Get ids.
+                ids = int32([reliableTracks(:).id]);
+
+                % Create labels for objects indicating the ones for
+                % which we display the predicted rather than the actual
+                % location.
+                labels = cellstr(int2str(ids'));
+                predictedTrackInds = ...
+                    [reliableTracks(:).consecutiveInvisibleCount] > 0;
+                isPredicted = cell(size(labels));
+                isPredicted(predictedTrackInds) = {' predicted'};
+                labels = strcat(labels, isPredicted);
+
+                % Draw the objects on the frame.
+                frame = insertObjectAnnotation(frame, 'rectangle', ...
+                    bboxes, labels);
+
+                % Draw the objects on the mask.
+                mask = insertObjectAnnotation(mask, 'rectangle', ...
+                    bboxes, labels);
+            end
+        end
+
+        % Display the mask and the frame.
+        obj.maskPlayer.step(mask);
+        obj.videoPlayer.step(frame);
+end
+
+end
