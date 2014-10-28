@@ -29,45 +29,44 @@
        <div class='graph'>
            <nvd3-line-chart
             data="exampleData"
+            ng-model="exampleData"
             id="exampleId"
+            objectequality="true"
             width="600"
             height="400"
             showXAxis="true"
+            interactive="true"
             showYAxis="true"
             tooltips="true"
-            xAxisTickFormat="xAxisTickFormat()"
             yAxisTickFormat="yAxisTickFormat()"
+            xAxisTickFormat="xAxisTickFormat()"
             >
         <svg></svg>
     </nvd3-line-chart>
        </div>
-       <div class='graph'>
-            <nvd3-line-chart
-            data="exampleData"
-            id="exampleId"
-            width="600"
-            height="400"
-            showXAxis="true"
-            showYAxis="true"
-            tooltips="true"
-            xAxisTickFormat="xAxisTickFormat()"
-            yAxisTickFormat="yAxisTickFormat()"
-            >
-        <svg></svg>
-    </nvd3-line-chart>
-       </div>
-      
- 
+      <!--  <div class='graph2'>
+         <nvd3-scatter-chart
+           data="path"
+           ng-model="path"
+           id="exampleId2"
+           width="600"
+           height="400"
+           showXAxis="true"
+           interactive="true"
+           showYAxis="true"
+           tooltips="true"
+           objectequality="true"
+           shape="shapeSquareFunction()">
+         <svg></svg>
+          </nvd3-scatter-chart>
+      </div> -->
+
         </body>
 
-        <script src="/js/vendor/jquery.min.js"></script>
         <script src="/js/vendor/socket.io.js"></script>
-        <script src="/js/vendor/sizzle.min.js"></script>
         <script src="/js/vendor/angular.min.js"></script>
-        <script src="/js/vendor/angular-bootstrap.min.js"></script>
-        <script src="/js/vendor/d3.min.js" charset="utf-8"></script>
-        <script src="/js/vendor/moment.js"></script>
+        <script src="/js/vendor/d3.v3.js" charset="utf-8"></script>
         <script src="/js/vendor/nv.d3.js"></script>
         <script src="/js/vendor/angularjs-nvd3-directives.min.js"></script>
-        <script src="/dist/app.min.js"></script>
+        <script src="/js/app.js"></script>
 </html>

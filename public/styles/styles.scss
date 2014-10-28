@@ -7210,9 +7210,17 @@ body header .authors div, html header .authors div {
 }
 
 body .graph, html .graph {
-  width: 50%;
+  width: 60%;
   position: absolute;
   float: left;
   top: 50%;
   margin-top: -228px;
+}
+
+.graph2{
+  right:20px;
+  position: absolute;
+  top:50%;
+  margin-top: -228px;
+  width: 40%;
 }

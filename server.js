@@ -4,7 +4,6 @@
 var express = require('express');
 var mongoose = require('mongoose');
 var fs = require('fs');
-var watch = require('watch');
 var app = express();
 var host = "127.0.0.1";
 mongoose.connect('mongodb://localhost/btpMinor');
@@ -34,20 +33,31 @@ var i = 1;
 /*====================================
 =            watch the json            =
 ====================================*/
-      io.on('connection', function(socket) {
-watch.createMonitor('public/js', function(monitor) {
-    monitor.files['public/js/c.json'] // Stat object for my zshrc.
-    monitor.on("created", function(f, stat) {
-        console.log("created");
-    });
-    monitor.on("changed", function(f, curr, prev) {
-        fs.readFile('public/js/c.json', 'utf8', function(err,args){
-            args=JSON.parse(args);
-             socket.emit('updated', args);
+io.on('connection', function(socket) {
+    /*watch.createMonitor('public/js', function(monitor) {
+        monitor.files['public/js/c.json'] // Stat object for my zshrc.
+        monitor.on("created", function(f, stat) {
+            console.log("created");
         });
-           
+        monitor.on("changed", function(f, curr, prev) {
+            fs.readFile('public/js/c.json', 'utf8', function(err,args){
+                args=JSON.parse(args);
+                 socket.emit('updated', args);
+            });
+               
+        });
+    });*/
+    fs.watch('public/js/data', function(event, filename) {
+        fs.readFile('public/js/data/' + filename, function(err, data) {
+            if (data!==undefined) {
+                var args = JSON.parse(data);
+                if(args.num)
+                socket.emit('updated', args);
+            }
+
+        });
+
     });
-});
 });
 
 

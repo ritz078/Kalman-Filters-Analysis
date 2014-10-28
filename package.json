@@ -4,6 +4,7 @@
   "description": "",
   "main": "server.js",
   "dependencies": {
+    "chokidar": "^0.10.2",
     "express": "latest",
     "mongoose": "latest",
     "watch": "latest"
