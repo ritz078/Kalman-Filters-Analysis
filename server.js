@@ -34,24 +34,12 @@ var i = 1;
 =            watch the json            =
 ====================================*/
 io.on('connection', function(socket) {
-    /*watch.createMonitor('public/js', function(monitor) {
-        monitor.files['public/js/c.json'] // Stat object for my zshrc.
-        monitor.on("created", function(f, stat) {
-            console.log("created");
-        });
-        monitor.on("changed", function(f, curr, prev) {
-            fs.readFile('public/js/c.json', 'utf8', function(err,args){
-                args=JSON.parse(args);
-                 socket.emit('updated', args);
-            });
-               
-        });
-    });*/
+
     fs.watch('public/js/data', function(event, filename) {
         fs.readFile('public/js/data/' + filename, function(err, data) {
             if (data!==undefined) {
                 var args = JSON.parse(data);
-                if(args.num)
+                if(args)
                 socket.emit('updated', args);
             }
 
