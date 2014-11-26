@@ -15,6 +15,7 @@ while ~isDone(obj.reader)
     x.cent=centroids;
     x.num=size(centroids,1);
     savejson('',x,'../public/js/data/c.json');
+    
     predictNewLocationsOfTracks();
     [assignments, unassignedTracks, unassignedDetections] = ...
         detectionToTrackAssignment();
@@ -33,7 +34,7 @@ function obj = setupSystemObjects()
         % objects in each frame, and playing the video.
 
         % Create a video file reader.
-        obj.reader = vision.VideoFileReader('test.avi');
+        obj.reader = vision.VideoFileReader('iitr.mov');
 
         % Create two video players, one to display the video,
         % and one to display the foreground mask.
