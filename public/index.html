@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title></title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="/dist/styles.css">
+
+        <!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
+    </head>
+    <body ng-app="btpApp" ng-controller="BtpController" ng-hint>
+        <!--[if lt IE 7]>
+            <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+        <![endif]-->
+
+       <header>
+       	<span>Crowd Data Analysis Using Kalman Filters</span>
+       	<div class="authors">
+       		<div>Pranav Sharma</div>
+       		<div>Rupal Saraswat</div>
+       		<div>Ritesh Kumar</div>
+       	</div>
+       </header>
+       <div class='graph'>
+           <nvd3-line-chart
+            data="exampleData"
+            ng-model="exampleData"
+            id="exampleId"
+            objectequality="true"
+            width="600"
+            height="400"
+            showXAxis="true"
+            interactive="false"
+            color="colorFunction()"
+            showYAxis="true"
+            tooltips="true"
+            yAxisTickFormat="yAxisTickFormat()"
+            xAxisTickFormat="xAxisTickFormat()"
+            >
+        <svg></svg>
+    </nvd3-line-chart>
+       </div>
+       <div class='graph2'>
+         <nvd3-scatter-chart
+           data="path"
+           ng-model="path"
+           id="exampleId2"
+           width="600"
+           height="400"
+           showXAxis="true"
+           forcey="[-900,0]"
+           forcex="[0,1400]"
+            color="colorFunction()"
+           interactive="false"
+           showYAxis="true"
+           tooltips="true"
+           objectequality="true"
+           shape="shapeSquareFunction()">
+         <svg></svg>
+          </nvd3-scatter-chart>
+      </div>
+
+        </body>
+
+        <script src="/js/vendor/socket.io.js"></script>
+        <script src="/js/vendor/angular.min.js"></script>
+        <!-- <script src="/js/angular-hint/dist/hint.js"></script> -->
+        <script src="/js/vendor/d3.v3.js" charset="utf-8"></script>
+        <script src="/js/vendor/nv.d3.js"></script>
+        <script src="/js/vendor/angularjs-nvd3-directives.min.js"></script>
+        <script src="/js/app.js"></script>
+</html>
